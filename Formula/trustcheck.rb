@@ -200,6 +200,9 @@ class Trustcheck < Formula
 
   def install
     ENV.prepend_path "PKG_CONFIG_PATH", formula_opt_lib("libffi")/"pkgconfig"
+    # setuptools-scm's sdist needs a version hint when built without its git metadata.
+    ENV["SETUPTOOLS_SCM_PRETEND_VERSION_FOR_SETUPTOOLS_SCM"] = "10.0.5"
+
     virtualenv_install_with_resources
   end
 
