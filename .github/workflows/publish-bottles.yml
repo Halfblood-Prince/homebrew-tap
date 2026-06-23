@@ -61,17 +61,26 @@ jobs:
       - name: Check tap syntax
         run: brew test-bot --only-tap-syntax
 
-      - name: Build and test bottle
-        run: >
-          brew test-bot --only-formulae
-          --testing-formulae=trustcheck
-          --root-url=https://ghcr.io/v2/halfblood-prince/tap
+      - name: Build formula for bottle
+        working-directory: ${{ steps.set-up-homebrew.outputs.repository-path }}
+        run: brew install --build-bottle --verbose ./Formula/trustcheck.rb
+
+      - name: Run formula test
+        working-directory: ${{ steps.set-up-homebrew.outputs.repository-path }}
+        run: brew test ./Formula/trustcheck.rb
+
+      - name: Create bottle artifact
+        working-directory: ${{ steps.set-up-homebrew.outputs.repository-path }}
+        run: |
+          brew bottle --json --root-url=https://ghcr.io/v2/halfblood-prince/tap ./Formula/trustcheck.rb
+          ls -1 ./*.bottle.*
 
       - name: Upload bottle artifacts
         uses: actions/upload-artifact@v7
         with:
           name: bottles_${{ matrix.os }}
-          path: "*.bottle.*"
+          path: ${{ steps.set-up-homebrew.outputs.repository-path }}/*.bottle.*
+          if-no-files-found: error
 
   publish:
     if: github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, '[skip bottles]')
