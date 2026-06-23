@@ -15,7 +15,7 @@ class Trustcheck < Formula
   depends_on "python@3.13"
 
   pypi_packages package_name:     "trustcheck",
-                extra_packages: ["setuptools-scm", "wheel"],
+                extra_packages:   ["setuptools-scm", "wheel"],
                 exclude_packages: "setuptools"
 
   resource "annotated-types" do
