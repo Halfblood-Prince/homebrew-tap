@@ -144,8 +144,8 @@ class Trustcheck < Formula
   end
 
   resource "setuptools-scm" do
-    url "https://files.pythonhosted.org/packages/a5/b1/2a6a8ecd6f9e263754036a0b573360bdbd6873b595725e49e11139722041/setuptools_scm-10.0.5.tar.gz"
-    sha256 "bbba8fe754516cdefd017f4456721775e6ef9662bd7887fb52ae26813d4838c3"
+    url "https://files.pythonhosted.org/packages/a6/3e/edb74671eca6429f375244d1d6395c11b7d4832cda772e4c630141e121c7/setuptools_scm-10.1.1.tar.gz"
+    sha256 "c9eed4754da1a25016d49c1b3cd09c7c8e65f816b5afb8195bf2ac3c6748f23a"
   end
 
   resource "sigstore" do
@@ -200,9 +200,6 @@ class Trustcheck < Formula
 
   def install
     ENV.prepend_path "PKG_CONFIG_PATH", formula_opt_lib("libffi")/"pkgconfig"
-    # setuptools-scm's sdist needs a version hint when built without its git metadata.
-    ENV["SETUPTOOLS_SCM_PRETEND_VERSION_FOR_SETUPTOOLS_SCM"] = "10.0.5"
-
     virtualenv_install_with_resources
   end
 
