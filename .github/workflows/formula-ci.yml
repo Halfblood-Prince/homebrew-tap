@@ -1,31 +1,57 @@
 name: Formula CI
 
 on:
-  push:
-    branches:
-      - main
   pull_request:
   workflow_dispatch:
 
 permissions:
+  actions: read
+  checks: read
   contents: read
+  pull-requests: read
 
 jobs:
-  formula:
-    runs-on: macos-latest
+  test-bot:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15-intel, macos-26]
+        include:
+          - os: ubuntu-latest
+            container: ghcr.io/homebrew/brew:main
+
+    runs-on: ${{ matrix.os }}
+    container: ${{ matrix.container }}
 
     steps:
-      - name: Check out tap
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
+      - name: Set up Homebrew
+        id: set-up-homebrew
+        uses: Homebrew/actions/setup-homebrew@main
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Update Homebrew
-        run: brew update
+      - name: Cache Homebrew Bundler RubyGems
+        uses: actions/cache@v5
+        with:
+          path: ${{ steps.set-up-homebrew.outputs.gems-path }}
+          key: ${{ matrix.os }}-rubygems-${{ steps.set-up-homebrew.outputs.gems-hash }}
+          restore-keys: ${{ matrix.os }}-rubygems-
+
+      - name: Clean Homebrew state
+        run: brew test-bot --only-cleanup-before
+
+      - name: Check Homebrew setup
+        run: brew test-bot --only-setup
+
+      - name: Check tap syntax
+        run: brew test-bot --only-tap-syntax
 
       - name: Check formula style
+        working-directory: ${{ steps.set-up-homebrew.outputs.repository-path }}
         run: brew style Formula/trustcheck.rb
 
       - name: Install formula from source
-        run: brew install --build-from-source ./Formula/trustcheck.rb
+        run: brew install --build-from-source Halfblood-Prince/tap/trustcheck
 
       - name: Run formula test
-        run: brew test ./Formula/trustcheck.rb
+        run: brew test Halfblood-Prince/tap/trustcheck

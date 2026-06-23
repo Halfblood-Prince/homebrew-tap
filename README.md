@@ -6,3 +6,9 @@ Install TrustCheck with Homebrew:
 brew tap Halfblood-Prince/tap
 brew install trustcheck
 ```
+
+Or install directly:
+
+```sh
+brew install Halfblood-Prince/tap/trustcheck
+```

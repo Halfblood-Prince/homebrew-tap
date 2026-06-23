@@ -1,0 +1,136 @@
+name: Publish Bottles
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - Formula/trustcheck.rb
+      - .github/workflows/publish-bottles.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-bottles-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, '[skip bottles]')
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15-intel, macos-26]
+        include:
+          - os: ubuntu-latest
+            container: ghcr.io/homebrew/brew:main
+
+    runs-on: ${{ matrix.os }}
+    container: ${{ matrix.container }}
+
+    permissions:
+      actions: read
+      checks: read
+      contents: read
+      packages: read
+      pull-requests: read
+
+    steps:
+      - name: Set up Homebrew
+        id: set-up-homebrew
+        uses: Homebrew/actions/setup-homebrew@main
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Cache Homebrew Bundler RubyGems
+        uses: actions/cache@v5
+        with:
+          path: ${{ steps.set-up-homebrew.outputs.gems-path }}
+          key: ${{ matrix.os }}-rubygems-${{ steps.set-up-homebrew.outputs.gems-hash }}
+          restore-keys: ${{ matrix.os }}-rubygems-
+
+      - name: Clean Homebrew state
+        run: brew test-bot --only-cleanup-before
+
+      - name: Check Homebrew setup
+        run: brew test-bot --only-setup
+
+      - name: Check tap syntax
+        run: brew test-bot --only-tap-syntax
+
+      - name: Build and test bottle
+        run: >
+          brew test-bot --only-formulae
+          --testing-formulae=trustcheck
+          --root-url=https://ghcr.io/v2/halfblood-prince/tap
+
+      - name: Upload bottle artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: bottles_${{ matrix.os }}
+          path: "*.bottle.*"
+
+  publish:
+    if: github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, '[skip bottles]')
+    needs: build
+    runs-on: ubuntu-latest
+
+    permissions:
+      actions: read
+      checks: read
+      contents: write
+      issues: read
+      packages: write
+      pull-requests: read
+
+    steps:
+      - name: Set up Homebrew
+        id: set-up-homebrew
+        uses: Homebrew/actions/setup-homebrew@main
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up git
+        uses: Homebrew/actions/git-user-config@main
+
+      - name: Download bottle artifacts
+        uses: actions/download-artifact@v7
+        with:
+          pattern: bottles_*
+          path: bottles
+          merge-multiple: true
+
+      - name: Stage bottle files
+        run: |
+          find bottles -type f -name '*.bottle.*' -exec cp {} . \;
+          ls -1 *.bottle.*
+
+      - name: Merge bottle checksums
+        run: brew bottle --merge --write --no-commit --no-all-checks *.json
+
+      - name: Upload bottles
+        env:
+          HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HOMEBREW_GITHUB_PACKAGES_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HOMEBREW_GITHUB_PACKAGES_USER: ${{ github.repository_owner }}
+        run: brew pr-upload --debug --no-commit --warn-on-upload-failure
+
+      - name: Commit bottle block
+        working-directory: ${{ steps.set-up-homebrew.outputs.repository-path }}
+        run: |
+          if git diff --quiet -- Formula/trustcheck.rb; then
+            echo "Bottle block already up to date."
+            exit 0
+          fi
+
+          git add Formula/trustcheck.rb
+          git commit -m "trustcheck: publish bottles [skip bottles]"
+
+      - name: Push bottle commit
+        uses: Homebrew/actions/git-try-push@main
+        with:
+          branch: main
+          directory: ${{ steps.set-up-homebrew.outputs.repository-path }}
