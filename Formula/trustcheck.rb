@@ -5,18 +5,18 @@ class Trustcheck < Formula
   homepage "https://github.com/Halfblood-Prince/trustcheck"
   url "https://files.pythonhosted.org/packages/b1/4c/8882a81c4357389cc70860a5db649c02ba0ac57ba3455e3002ec77cb4b98/trustcheck-2.1.0.tar.gz"
   sha256 "6ca768e9231c885f731051dd658b7a9cfbba68fd00a6d1f82a74fd7b0b5a4e26"
-  license "LicenseRef-Trustcheck-Personal-Use"
+  license :cannot_represent
 
   head "https://github.com/Halfblood-Prince/trustcheck.git", branch: "main"
-
-  pypi_packages package_name: "trustcheck",
-                extra_packages: ["setuptools-scm", "wheel"],
-                exclude_packages: "setuptools"
 
   depends_on "pkgconf" => :build
   depends_on "rust" => :build
   depends_on "libffi"
   depends_on "python@3.13"
+
+  pypi_packages package_name:     "trustcheck",
+                extra_packages:  ["setuptools-scm", "wheel"],
+                exclude_packages: "setuptools"
 
   resource "annotated-types" do
     url "https://files.pythonhosted.org/packages/ee/67/531ea369ba64dcff5ec9c3402f9f51bf748cec26dde048a2f973a4eea7f5/annotated_types-0.7.0.tar.gz"
@@ -199,7 +199,7 @@ class Trustcheck < Formula
   end
 
   def install
-    ENV.prepend_path "PKG_CONFIG_PATH", Formula["libffi"].opt_lib/"pkgconfig"
+    ENV.prepend_path "PKG_CONFIG_PATH", formula_opt_lib("libffi")/"pkgconfig"
     virtualenv_install_with_resources
   end
 
