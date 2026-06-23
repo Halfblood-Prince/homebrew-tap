@@ -9,6 +9,14 @@ class Trustcheck < Formula
 
   head "https://github.com/Halfblood-Prince/trustcheck.git", branch: "main"
 
+  bottle do
+    root_url "https://ghcr.io/v2/halfblood-prince/tap"
+    rebuild 1
+    sha256 cellar: :any, arm64_tahoe:  "1db6a700d2003d56bb723992ee5106cce8983250e02f64e4c28def19f5e204f0"
+    sha256 cellar: :any, tahoe:        "871de8a3a868689daf1d7dd13c9fb7aecfea7b9f2fe5699a661c0b0096b7996c"
+    sha256 cellar: :any, x86_64_linux: "7de8e09f65cbc606cce4755bca58ab0bc38f4b5fda5d14f41c7df0fa06ddafa6"
+  end
+
   depends_on "pkgconf" => :build
   depends_on "rust" => :build
   depends_on "libffi"
