@@ -1,0 +1,72 @@
+name: Sync TrustCheck Formula
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Optional trustcheck tag, for example v2.1.0
+        required: false
+  repository_dispatch:
+    types:
+      - trustcheck-release
+      - trustcheck-sync
+  schedule:
+    - cron: "17 */6 * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-trustcheck
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: macos-latest
+
+    steps:
+      - name: Check out tap
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
+        with:
+          fetch-depth: 0
+
+      - name: Clone upstream trustcheck
+        run: git clone --filter=blob:none --tags https://github.com/Halfblood-Prince/trustcheck.git .upstream/trustcheck
+
+      - name: Update formula source
+        id: formula
+        env:
+          TRUSTCHECK_TAG: ${{ inputs.tag || github.event.client_payload.tag || '' }}
+          UPSTREAM_PATH: .upstream/trustcheck
+        run: python .github/scripts/update_formula.py
+
+      - name: Refresh Python resources
+        run: >
+          brew update-python-resources Formula/trustcheck.rb
+          --package-name trustcheck
+          --version "${{ steps.formula.outputs.version }}"
+          --extra-packages setuptools-scm,wheel
+          --exclude-packages setuptools
+          --install-dependencies
+
+      - name: Check formula style
+        run: brew style Formula/trustcheck.rb
+
+      - name: Smoke test formula
+        run: brew install --build-from-source ./Formula/trustcheck.rb
+
+      - name: Run formula test
+        run: brew test ./Formula/trustcheck.rb
+
+      - name: Commit synced formula
+        run: |
+          if git diff --quiet; then
+            echo "Formula already matches trustcheck ${{ steps.formula.outputs.tag }}."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Formula/trustcheck.rb
+          git commit -m "Sync trustcheck ${{ steps.formula.outputs.tag }}"
+          git push
