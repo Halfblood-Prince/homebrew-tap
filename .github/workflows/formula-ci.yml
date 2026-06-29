@@ -48,10 +48,18 @@ jobs:
 
       - name: Check formula style
         working-directory: ${{ steps.set-up-homebrew.outputs.repository-path }}
-        run: brew style Formula/trustcheck.rb
+        run: brew style Formula/trustcheck.rb Formula/pi-doctor.rb
 
-      - name: Install formula from source
+      - name: Install trustcheck formula from source
         run: brew install --build-from-source Halfblood-Prince/tap/trustcheck
 
-      - name: Run formula test
+      - name: Run trustcheck formula test
         run: brew test Halfblood-Prince/tap/trustcheck
+
+      - name: Install pi-doctor formula
+        if: matrix.os == 'ubuntu-latest'
+        run: brew install Halfblood-Prince/tap/pi-doctor
+
+      - name: Run pi-doctor formula test
+        if: matrix.os == 'ubuntu-latest'
+        run: brew test Halfblood-Prince/tap/pi-doctor
